@@ -36,6 +36,20 @@ public class AppController {
         }
     }
 
+    @GetMapping("/user/email/{email}")
+    public ResponseEntity<ResponseModel<?>> findUserByEmail(@PathVariable(name="email") String email){
+        try {
+            return ResponseEntity.ok(
+                    new ResponseModel<User>(
+                            userService.findByEmail(email)
+                    )
+            );
+        }catch (AbstractException e){
+            return ResponseEntity.ok()
+                    .body(new ResponseModel<>(e));
+        }
+    }
+
     @PostMapping("/register")
     public ResponseEntity<ResponseModel<?>> createUser(@RequestBody @Valid User user){
 
