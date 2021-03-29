@@ -16,11 +16,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("select u from User u where u.firstname like %?1% or u.lastname like %?2%")
     Page<User> findAll(String fistName, String lastName, Pageable pageable);
 
-    boolean existsByCode(String code);
+    boolean existsByMatricule(String code);
 
-    User findByCode(String code);
+    User findByMatricule(String code);
 
-    void deleteByCode(String code);
+    void deleteByMatricule(String code);
 
     boolean existsByRole(String role);
 

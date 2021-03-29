@@ -1,11 +1,7 @@
 package com.sabc.digitalchampions.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sabc.digitalchampions.exceptions.NullUsersEmailException;
-import com.sabc.digitalchampions.exceptions.NullUsersLastNameException;
-import com.sabc.digitalchampions.exceptions.NullUsersPhoneException;
-import com.sabc.digitalchampions.exceptions.NullUsersRoleException;
+import com.sabc.digitalchampions.exceptions.*;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -13,13 +9,13 @@ import java.util.Objects;
 
 @Entity
 @Table
-public class User {
+public class User{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
     @Column(unique = true, updatable = false)
-    private String code;
+    private String matricule;
     private String firstname;
     @Column(nullable = false)
     private String lastname;
@@ -38,14 +34,12 @@ public class User {
     private boolean emailChecked;
     private boolean phoneChecked;
     @Column(nullable = false)
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
     @Temporal(TemporalType.TIMESTAMP)
     private Date lastUpdatedAt;
     @Column(nullable = false)
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String role;
 
     public User() {
@@ -65,12 +59,12 @@ public class User {
         return this;
     }
 
-    public String getCode() {
-        return code;
+    public String getMatricule() {
+        return matricule;
     }
 
-    public User setCode(String ref) {
-        this.code = ref;
+    public User setMatricule(String ref) {
+        this.matricule = ref;
         return this;
     }
 
@@ -208,13 +202,12 @@ public class User {
         this.phoneChecked = phoneChecked;
         return this;
     }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         User user = (User) o;
-        return code.equals(user.code) &&
+        return matricule.equals(user.matricule) &&
                 firstname.equals(user.firstname) &&
                 Objects.equals(lastname, user.lastname) &&
                 phone.equals(user.phone) &&
@@ -226,7 +219,7 @@ public class User {
 
     @Override
     public int hashCode() {
-        return Objects.hash(code, firstname, lastname, phone, email, createdAt, role); // username
+        return Objects.hash(matricule, firstname, lastname, phone, email, createdAt, role); // username
     }
 
 //    @Override
@@ -239,7 +232,7 @@ public class User {
     public String toString() {
         return "User{" +
                 "id=" + id +
-                ", ref='" + code + '\'' +
+                ", ref='" + matricule + '\'' +
                 ", firstName='" + firstname + '\'' +
                 ", lastName='" + lastname + '\'' +
                 ", phone='" + phone + '\'' +
@@ -252,9 +245,12 @@ public class User {
     }
 
     @JsonIgnore
-    public void checkUser() throws NullUsersEmailException, NullUsersPhoneException, NullUsersLastNameException, NullUsersRoleException {
+    public void checkValidity() throws AbstractException{
         if (email == null || email.isEmpty()){
             throw new NullUsersEmailException();
+        }
+        if (matricule == null || matricule.isEmpty()){
+            throw new NullUsersMatriculeException();
         }
         if (phone == null || phone.isEmpty()){
             throw new NullUsersPhoneException();

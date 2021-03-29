@@ -1,12 +1,10 @@
 package com.sabc.digitalchampions;
 
 import com.sabc.digitalchampions.entity.User;
-import com.sabc.digitalchampions.exceptions.NullUsersEmailException;
-import com.sabc.digitalchampions.exceptions.NullUsersLastNameException;
-import com.sabc.digitalchampions.exceptions.NullUsersPhoneException;
-import com.sabc.digitalchampions.exceptions.NullUsersRoleException;
 import com.sabc.digitalchampions.services.UserService;
 import com.sabc.digitalchampions.utils.CustomCodeGenerator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -23,6 +21,8 @@ public class DigitalChampionsApplication implements CommandLineRunner {
 
 	@Autowired
 	private UserService userService;
+
+	private Logger logger = LogManager.getLogger(DigitalChampionsApplication.class);
 
 	public static void main(String[] args) {
 		SpringApplication.run(DigitalChampionsApplication.class, args);
@@ -59,15 +59,18 @@ public class DigitalChampionsApplication implements CommandLineRunner {
 					.setPhone("000000000")
 					.setPhoneChecked(true)
 					.setEmailChecked(true)
-					.setCode(CustomCodeGenerator.generateUserCode())
+					.setMatricule(CustomCodeGenerator.generateUserCode())
 					.setRole("ROLE_ADMIN")
 					.setCreatedAt(new Date())
 					.setLastUpdatedAt(new Date())
 					.setEnabled(true)
 					.setEnabledAt(new Date());
 			try {
-				userService.register(defaultUser);
-			} catch (NullUsersEmailException | NullUsersRoleException | NullUsersPhoneException | NullUsersLastNameException e) {
+				if(!userService.checkAdmin()){
+					userService.register(defaultUser);
+				}
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 				e.printStackTrace();
 			}
 		}

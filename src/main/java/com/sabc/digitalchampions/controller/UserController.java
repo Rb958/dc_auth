@@ -2,6 +2,7 @@ package com.sabc.digitalchampions.controller;
 
 import com.sabc.digitalchampions.entity.User;
 import com.sabc.digitalchampions.exceptions.*;
+import com.sabc.digitalchampions.security.payload.response.ResponseException;
 import com.sabc.digitalchampions.security.payload.response.ResponseModel;
 import com.sabc.digitalchampions.services.UserService;
 import org.apache.logging.log4j.LogManager;
@@ -28,7 +29,7 @@ public class UserController {
     }
 
     @GetMapping("/user")
-    public ResponseEntity<ResponseModel<Page<User>>> findAllUsers(@RequestParam(name = "firstName")Optional<String> code, Optional<String> lastName){
+    public ResponseEntity<?> findAllUsers(@RequestParam(name = "firstName")Optional<String> code, Optional<String> lastName){
         return ResponseEntity.ok(
                 new ResponseModel<>(
                         userService.getUsers(code, lastName, Pageable.unpaged())
@@ -37,7 +38,7 @@ public class UserController {
     }
 
     @GetMapping("/user/{ref}")
-    public ResponseEntity<ResponseModel<?>> findUserByRef(@PathVariable(name="ref") String ref){
+    public ResponseEntity<?> findUserByRef(@PathVariable(name="ref") String ref){
         try {
             return ResponseEntity.ok(
                     new ResponseModel<User>(
@@ -46,12 +47,12 @@ public class UserController {
             );
         }catch (AbstractException e){
             return ResponseEntity.ok()
-                    .body(new ResponseModel<>(e));
+                    .body(new ResponseException(e));
         }
     }
 
     @GetMapping("/user/email/{email}")
-    public ResponseEntity<ResponseModel<?>> findUserByEmail(@PathVariable(name="email") String email){
+    public ResponseEntity<?> findUserByEmail(@PathVariable(name="email") String email){
         try {
             return ResponseEntity.ok(
                     new ResponseModel<User>(
@@ -60,12 +61,12 @@ public class UserController {
             );
         }catch (AbstractException e){
             return ResponseEntity.ok()
-                    .body(new ResponseModel<>(e));
+                    .body(new ResponseException(e));
         }
     }
 
     @GetMapping("/user/phone/{phone}")
-    public ResponseEntity<ResponseModel<?>> findUserByPhone(@PathVariable(name="phone") String phone){
+    public ResponseEntity<?> findUserByPhone(@PathVariable(name="phone") String phone){
         try {
             return ResponseEntity.ok(
                     new ResponseModel<User>(
@@ -74,39 +75,37 @@ public class UserController {
             );
         }catch (AbstractException e){
             return ResponseEntity.ok()
-                    .body(new ResponseModel<>(e));
+                    .body(new ResponseException(e));
         }
     }
 
     @PutMapping("/user/{ref}")
-    public ResponseEntity<ResponseModel<?>> updateUser(@RequestBody @Valid User user, @PathVariable(name = "ref") String ref){
+    public ResponseEntity<?> updateUser(@RequestBody @Valid User user, @PathVariable(name = "ref") String ref){
 
         try {
             User tmpUser = userService.updateUser(user, ref);
             return ResponseEntity.ok(
                     new ResponseModel<>(tmpUser)
             );
+        }catch (AbstractException e){
+            return ResponseEntity.ok()
+                    .body(new ResponseException(e));
         }catch (Exception e){
-            if (e instanceof AbstractException){
-                return ResponseEntity.ok()
-                        .body(new ResponseModel<>(e));
-            }else{
-                log.error("Update Error: ", e);
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>("And Error occurred while trying to register this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
-                );
-            }
+            log.error("Update Error: ", e);
+            return ResponseEntity.status(500).body(
+                    new ResponseModel<>("And Error occurred while trying to register this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+            );
         }
     }
 
     @PostMapping("/user")
-    public ResponseEntity<ResponseModel<?>> createUser(@RequestBody @Valid User user){
+    public ResponseEntity<?> createUser(@RequestBody @Valid User user){
 
         try{
-            user.checkUser();
+            user.checkValidity();
         } catch (AbstractException e) {
             return ResponseEntity.ok().body(
-                    new ResponseModel<>(e)
+                    new ResponseException(e)
             );
         }
 
@@ -114,122 +113,104 @@ public class UserController {
         try{
             userTmp = userService.saveUser(user);
             return ResponseEntity.ok(new ResponseModel<>(userTmp));
+        }catch (AbstractException e){
+            return ResponseEntity.ok()
+                    .body(new ResponseException(e));
         }catch(Exception e){
-
-            if (e instanceof AbstractException){
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>(e)
-                );
-            }else{
-                log.error(e);
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>("And Error occured while trying to registre this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
-                );
-            }
+            log.error(e);
+            return ResponseEntity.status(500).body(
+                    new ResponseModel<>("And Error occured while trying to registre this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+            );
         }
     }
 
     @PreAuthorize(value = "hasRole('ROLE_ADMIN')")
     @DeleteMapping("/user/{ref}")
-    public ResponseEntity<ResponseModel<?>> deleteUser(@Valid @PathVariable(name = "ref") String ref){
+    public ResponseEntity<?> deleteUser(@Valid @PathVariable(name = "ref") String ref){
         try{
             userService.deleteByRef(ref);
             return ResponseEntity.ok(
                     new ResponseModel<>("Successfully deleted", HttpStatus.OK)
             );
-        }catch(Exception e){
-            if (e instanceof AbstractException){
-                return ResponseEntity.ok().body(
-                        new ResponseModel<>(e)
-                );
-            }else {
-                log.error(e);
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>("And Error occurred while trying to delete this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
-                );
-            }
+        }catch(AbstractException e){
+            return ResponseEntity.ok().body(new ResponseException(e));
+        }
+        catch(Exception e){
+            log.error(e);
+            return ResponseEntity.status(500).body(
+                    new ResponseModel<>("And Error occurred while trying to delete this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+            );
         }
     }
 
     @PreAuthorize(value = "hasRole('ROLE_ADMIN')")
     @PatchMapping("/user/{ref}/disable")
-    public ResponseEntity<ResponseModel<?>> desableUser(@Valid @PathVariable(name = "ref") String ref){
+    public ResponseEntity<?> desableUser(@Valid @PathVariable(name = "ref") String ref){
         try{
             userService.disableUser(ref);
             return ResponseEntity.ok(
                     new ResponseModel<>("Successfully Disabled", HttpStatus.OK)
             );
-        }catch(Exception e){
-            if (e instanceof AbstractException){
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>(e)
-                );
-            }else {
-                log.error(e);
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>("And Error occurred while trying to disable this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
-                );
-            }
+        }catch(AbstractException  e){
+            return ResponseEntity.ok().body(
+                    new ResponseException(e)
+            );
+        }catch (Exception e){
+            log.error(e);
+            return ResponseEntity.status(500).body(
+                    new ResponseModel<>("And Error occurred while trying to disable this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+            );
         }
     }
 
     @PreAuthorize(value = "hasRole('ROLE_ADMIN')")
     @PatchMapping("/user/{ref}/enable")
-    public ResponseEntity<ResponseModel<?>> enableUser(@Valid @PathVariable(name = "ref") String ref){
+    public ResponseEntity<?> enableUser(@Valid @PathVariable(name = "ref") String ref){
         try{
             userService.enableUser(ref);
             return ResponseEntity.ok(
                     new ResponseModel<>("Successfully Enabled", HttpStatus.OK)
             );
+        }catch (AbstractException e){
+            return ResponseEntity.ok()
+                    .body(new ResponseException(e));
         }catch(Exception e){
-            if (e instanceof AbstractException){
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>(e)
-                );
-            }else {
-                log.error(e);
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>("And Error occurred while trying to enable this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
-                );
-            }
+            log.error(e);
+            return ResponseEntity.status(500).body(
+                    new ResponseModel<>("And Error occurred while trying to enable this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+            );
         }
     }
 
     @PreAuthorize(value = "hasRole('ROLE_ADMIN')")
     @PatchMapping("/user/{code}/promote")
-    public ResponseEntity<ResponseModel<?>> promoteUser(@PathVariable(name = "code") String code){
+    public ResponseEntity<?> promoteUser(@PathVariable(name = "code") String code){
         try{
             userService.promote(code);
             return ResponseEntity.ok(new ResponseModel<>("This user has been successfully promoted", HttpStatus.OK));
+        }catch (AbstractException e){
+            return ResponseEntity.ok()
+                    .body(new ResponseException(e));
         }catch(Exception e){
-            if (e instanceof AbstractException){
-                return ResponseEntity.ok().body(
-                        new ResponseModel<>(e)
-                );
-            }else{
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>("And Error occurred while trying to promote this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
-                );
-            }
+            return ResponseEntity.status(500).body(
+                    new ResponseModel<>("And Error occurred while trying to promote this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+            );
         }
     }
 
     @PreAuthorize(value = "hasRole('ROLE_ADMIN')")
     @PatchMapping("/user/{code}/demote")
-    public ResponseEntity<ResponseModel<?>> demoteUser(@PathVariable(name = "code") String code){
+    public ResponseEntity<?> demoteUser(@PathVariable(name = "code") String code){
         try{
             userService.demote(code);
             return ResponseEntity.ok(new ResponseModel<>("This user has been successfully demoted", HttpStatus.OK));
+        }catch (AbstractException e){
+            return ResponseEntity.ok()
+                    .body(new ResponseException(e));
         }catch(Exception e){
-            if (e instanceof AbstractException){
-                return ResponseEntity.ok().body(
-                        new ResponseModel<>(e)
-                );
-            }else{
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>("And Error occurred while trying to demote this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
-                );
-            }
+            return ResponseEntity.status(500).body(
+                    new ResponseModel<>("And Error occurred while trying to demote this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+            );
         }
     }
 }

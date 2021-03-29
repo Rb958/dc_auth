@@ -27,7 +27,7 @@ public class UserDetailsImpl implements UserDetails {
 	public UserDetailsImpl(User user,Collection<? extends GrantedAuthority> authorities) {
 		this.firstName = user.getFirstname();
 		this.lastName = user.getLastname();
-		this.ref = user.getCode();
+		this.ref = user.getMatricule();
 		this.username = user.getEmail();
 		this.password = user.getPassword();
 		this.email = user.getEmail();

@@ -2,6 +2,7 @@ package com.sabc.digitalchampions.controller;
 
 import com.sabc.digitalchampions.entity.User;
 import com.sabc.digitalchampions.exceptions.*;
+import com.sabc.digitalchampions.security.payload.response.ResponseException;
 import com.sabc.digitalchampions.security.payload.response.ResponseModel;
 import com.sabc.digitalchampions.services.UserService;
 import com.sabc.digitalchampions.utils.codegenerator.RbCodeGenerator;
@@ -31,7 +32,12 @@ public class AppController {
             return ResponseEntity.ok(this.userService.login(utilisateur));
         }catch(AbstractException e){
             return ResponseEntity.ok().body(
-                    new ResponseModel<>(e)
+                    new ResponseException(e)
+            );
+        }catch(Exception ex){
+            logger.error(ex.getMessage(),ex);
+            return ResponseEntity.status(500).body(
+                    new ResponseModel<>("And Error occured while trying to registre this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
             );
         }
     }
@@ -51,32 +57,21 @@ public class AppController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ResponseModel<?>> createUser(@RequestBody @Valid User user){
+    public ResponseEntity<?> createUser(@RequestBody @Valid User user){
 
         try{
-            user.checkUser();
-        } catch (AbstractException e) {
-            return ResponseEntity.ok().body(
-                    new ResponseModel<>(e)
-            );
-        }
-
-        User userTmp;
-        try{
-            userTmp = userService.saveUser(user);
+            user.checkValidity();
+            User userTmp = userService.register(user);
             return ResponseEntity.ok(new ResponseModel<>(userTmp));
+        }catch (AbstractException e){
+            return ResponseEntity.ok(
+                    new ResponseException(e)
+            );
         }catch(Exception e){
-
-            if (e instanceof AbstractException){
-                return ResponseEntity.status(500).body(
-                        new ResponseModel<>(e)
-                );
-            }else{
-                logger.error(e);
+                logger.error(e.getMessage(),e);
                 return ResponseEntity.status(500).body(
                         new ResponseModel<>("And Error occured while trying to registre this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
                 );
-            }
         }
     }
 

@@ -22,12 +22,6 @@ public class ResponseModel<T> {
 		this.status = HttpStatus.OK.value();
 	}
 
-	public ResponseModel(AbstractException e) {
-		this.message = e.getMessage();
-		this.status = e.getCode();
-		this.data = null;
-	}
-
 	public String getMessage() {
 		return message;
 	}

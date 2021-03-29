@@ -6,13 +6,9 @@ import com.sabc.digitalchampions.repository.UserRepository;
 import com.sabc.digitalchampions.security.jwt.JwtUtils;
 import com.sabc.digitalchampions.security.payload.response.JwtResponse;
 import com.sabc.digitalchampions.security.services.UserDetailsImpl;
-import com.sabc.digitalchampions.utils.MailUtils;
 import com.sabc.digitalchampions.utils.codegenerator.CodeConfig;
 import com.sabc.digitalchampions.utils.codegenerator.CodeConfigBuilder;
 import com.sabc.digitalchampions.utils.codegenerator.RbCodeGenerator;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,10 +19,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import javax.mail.Multipart;
-import java.text.DateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -50,15 +44,20 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    public User register(User user) throws NullUsersEmailException, NullUsersRoleException, NullUsersPhoneException, NullUsersLastNameException {
+    public User register(User user) throws AbstractException{
 
-        user.checkUser();
+        user.checkValidity();
 
-        if (userRepository.existsByEmail(user.getEmail())) {
-            throw new NullUsersEmailException();
+        if (existsByEmail(user.getEmail())){
+            throw new EmailExistException();
+        }
+        if (existsByPhone(user.getPhone())){
+            throw new PhoneExistException();
         }
         // Create new user's account
-        user.setPassword(this.passwordEncoder.encode(user.getPassword()));
+        user.setPassword(this.passwordEncoder.encode(user.getPassword()))
+                .setCreatedAt(new Date())
+                .setLastUpdatedAt(new Date());
 
         if(user.getRole() == null || user.getRole().isEmpty()) {
             user.setRole("ROLE_USER");
@@ -66,6 +65,7 @@ public class UserService {
         return this.userRepository.save(user);
     }
 
+    @Transactional
     public JwtResponse login(User user) throws UserNotEnabledException {
         Authentication authentication = this.authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(user.getEmail(),user.getPassword())
@@ -79,10 +79,37 @@ public class UserService {
         }
 
         List<String> roles = userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList());
-        User tmpUser = userRepository.findByCode(userDetails.getRef());
+        User tmpUser = userRepository.findByMatricule(userDetails.getRef());
         tmpUser.setLastConnected(new Date());
         userRepository.save(tmpUser);
-        return new JwtResponse(jwtToken,userDetails.getLastName(), userDetails.getFirstName(), userDetails.getUsername(), roles);
+
+        CodeConfig codeConfig = (new CodeConfigBuilder())
+                .setLength(6)
+                .setLowerCase(true)
+                .setUpperCase(true)
+                .setWithDigits(true).build();
+
+//        RbCodeGenerator rbCredentialsGenerator = new RbCodeGenerator(codeConfig);
+//        String generatedPassword = rbCredentialsGenerator.generate();
+
+        // Code OTP
+//        OTP otp = new OTP();
+//
+//        if (userRepository.existsByMatricule(user.getMatricule())){
+//            List<String> address = new ArrayList<>();
+//            address.add(user.getEmail());
+//            MailUtils mailUtils = new MailUtils();
+//
+//            String messageBody = "" +
+//                    "<h1> Welcome to digital champions </h1>" +
+//                    "It's only a test" +
+//                    "<p> You have been successfully registered on our platform. Here is your password to access your space </p>" +
+//                    "<p> We suggest you change this password when you access the platform for the first time </p>"+
+//                    "<p>Your password : </p><strong>"+generatedPassword +"</strong><br>Date: "+ DateFormat.getDateTimeInstance().format(new Date());
+//
+//            mailUtils.sendHTMLMail(mainAdress, address, "Digital champions Your credentials", messageBody);
+//        }
+        return new JwtResponse(jwtToken,userDetails.getLastName(), userDetails.getFirstName(), userDetails.getUsername(), roles, userDetails.getRef());
     }
 
     public boolean existsByEmail(String email) {
@@ -94,7 +121,7 @@ public class UserService {
     }
 
     public boolean existByCode(String code) {
-        return userRepository.existsByCode(code);
+        return userRepository.existsByMatricule(code);
     }
 
     public boolean existsByPhone(String phone){
@@ -103,7 +130,7 @@ public class UserService {
 
     public User findByCode(String code) throws UserNotFoundException {
         if (existByCode(code)){
-            return userRepository.findByCode(code);
+            return userRepository.findByMatricule(code);
         }else{
             throw new UserNotFoundException();
         }
@@ -116,11 +143,6 @@ public class UserService {
         if (existsByPhone(user.getPhone())){
             throw new PhoneExistException();
         }
-
-        System.out.println(mainAdress);
-
-        RbCodeGenerator rbCodeGenerator = new RbCodeGenerator();
-
         CodeConfig codeConfig = (new CodeConfigBuilder())
                 .setLength(6)
                 .setLowerCase(true)
@@ -132,25 +154,26 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(generatedPassword));
 
         user.setRole("ROLE_USER")
-                .setCode(rbCodeGenerator.generate())
                 .setCreatedAt(new Date())
                 .setLastUpdatedAt(new Date());
         User newUser = userRepository.save(user);
 
-        if (userRepository.existsByCode(user.getCode())){
-            List<String> address = new ArrayList<>();
-            address.add(user.getEmail());
-            MailUtils mailUtils = new MailUtils();
+        // Envoie du code OTP
 
-            String messageBody = "" +
-                    "<h1> Welcome to digital champions </h1>" +
-                    "It's only a test" +
-                    "<p> You have been successfully registered on our platform. Here is your password to access your space </p>" +
-                    "<p> We suggest you change this password when you access the platform for the first time </p>"+
-                    "<p>Your password : </p><strong>"+generatedPassword +"</strong><br>Date: "+ DateFormat.getDateTimeInstance().format(new Date());
-
-            mailUtils.sendHTMLMail(mainAdress, address, "Digital champions Your credentials", messageBody);
-        }
+//        if (userRepository.existsByMatricule(user.getMatricule())){
+//            List<String> address = new ArrayList<>();
+//            address.add(user.getEmail());
+//            MailUtils mailUtils = new MailUtils();
+//
+//            String messageBody = "" +
+//                    "<h1> Welcome to digital champions </h1>" +
+//                    "It's only a test" +
+//                    "<p> You have been successfully registered on our platform. Here is your password to access your space </p>" +
+//                    "<p> We suggest you change this password when you access the platform for the first time </p>"+
+//                    "<p>Your password : </p><strong>"+generatedPassword +"</strong><br>Date: "+ DateFormat.getDateTimeInstance().format(new Date());
+//
+//            mailUtils.sendHTMLMail(mainAdress, address, "Digital champions Your credentials", messageBody);
+//        }
         return newUser;
     }
 
@@ -168,7 +191,7 @@ public class UserService {
             throw new UserNotFoundException();
         }
 
-        User tmpUser = findByCode(user.getCode());
+        User tmpUser = findByCode(user.getMatricule());
 
         if (!user.getEmail().equals(tmpUser.getEmail()) && existsByEmail(user.getEmail())){
             throw new EmailExistException();
@@ -179,7 +202,7 @@ public class UserService {
         }
 
         user.setRole(tmpUser.getRole())
-                .setCode(tmpUser.getCode())
+                .setMatricule(tmpUser.getMatricule())
                 .setLastUpdatedAt(new Date())
                 .setPassword(tmpUser.getPassword())
                 .setId(tmpUser.getId());
@@ -190,7 +213,7 @@ public class UserService {
         if (!existByCode(code)){
             throw new UserNotFoundException();
         }
-        User user = userRepository.findByCode(code);
+        User user = userRepository.findByMatricule(code);
         user.setEnabled(false)
                 .setDeletedAt(new Date());
         userRepository.save(user);
@@ -200,7 +223,7 @@ public class UserService {
         if (!existByCode(ref)){
             throw new UserNotFoundException();
         }
-        User user = userRepository.findByCode(ref);
+        User user = userRepository.findByMatricule(ref);
         user.setEnabled(true)
                 .setEnabledAt(new Date())
                 .setDeletedAt(null);
