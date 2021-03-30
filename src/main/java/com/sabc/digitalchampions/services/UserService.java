@@ -11,6 +11,7 @@ import com.sabc.digitalchampions.utils.codegenerator.CodeConfigBuilder;
 import com.sabc.digitalchampions.utils.codegenerator.RbCodeGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -53,6 +54,9 @@ public class UserService {
         }
         if (existsByPhone(user.getPhone())){
             throw new PhoneExistException();
+        }
+        if (existByMatricule(user.getMatricule())){
+            throw new MatriculeExistException();
         }
         // Create new user's account
         user.setPassword(this.passwordEncoder.encode(user.getPassword()))
@@ -120,7 +124,7 @@ public class UserService {
         return userRepository.findAll(firstName.orElse(""), lastName.orElse(""), pageable);
     }
 
-    public boolean existByCode(String code) {
+    public boolean existByMatricule(String code) {
         return userRepository.existsByMatricule(code);
     }
 
@@ -129,7 +133,7 @@ public class UserService {
     }
 
     public User findByCode(String code) throws UserNotFoundException {
-        if (existByCode(code)){
+        if (existByMatricule(code)){
             return userRepository.findByMatricule(code);
         }else{
             throw new UserNotFoundException();
@@ -156,7 +160,6 @@ public class UserService {
         user.setRole("ROLE_USER")
                 .setCreatedAt(new Date())
                 .setLastUpdatedAt(new Date());
-        User newUser = userRepository.save(user);
 
         // Envoie du code OTP
 
@@ -174,11 +177,11 @@ public class UserService {
 //
 //            mailUtils.sendHTMLMail(mainAdress, address, "Digital champions Your credentials", messageBody);
 //        }
-        return newUser;
+        return userRepository.save(user);
     }
 
     public void deleteByRef(String ref) throws UserNotFoundException {
-        if (!existByCode(ref)){
+        if (!existByMatricule(ref)){
             throw new UserNotFoundException();
         }
         User user = findByCode(ref);
@@ -187,7 +190,7 @@ public class UserService {
 
     public User updateUser(User user, String ref) throws UserNotFoundException, EmailExistException, PhoneExistException {
 
-        if (!existByCode(ref)){
+        if (!existByMatricule(ref)){
             throw new UserNotFoundException();
         }
 
@@ -210,7 +213,7 @@ public class UserService {
     }
 
     public void disableUser(String code) throws UserNotFoundException {
-        if (!existByCode(code)){
+        if (!existByMatricule(code)){
             throw new UserNotFoundException();
         }
         User user = userRepository.findByMatricule(code);
@@ -220,7 +223,7 @@ public class UserService {
     }
 
     public void enableUser(String ref) throws UserNotFoundException {
-        if (!existByCode(ref)){
+        if (!existByMatricule(ref)){
             throw new UserNotFoundException();
         }
         User user = userRepository.findByMatricule(ref);
@@ -270,5 +273,9 @@ public class UserService {
         }else{
             return user;
         }
+    }
+
+    public Page<User> getUsersEnabled(Optional<String> firstname, Optional<String> lastName, PageRequest pageable) {
+        return userRepository.findAddEnabled(firstname.orElse(""), lastName.orElse(""), pageable);
     }
 }

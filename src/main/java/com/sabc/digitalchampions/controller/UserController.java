@@ -8,6 +8,7 @@ import com.sabc.digitalchampions.services.UserService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,11 +29,21 @@ public class UserController {
         this.userService = userService;
     }
 
+    @PreAuthorize(value = "hasRole('ROLE_ADMIN')")
     @GetMapping("/user")
-    public ResponseEntity<?> findAllUsers(@RequestParam(name = "firstName")Optional<String> code, Optional<String> lastName){
+    public ResponseEntity<?> findAllUsers(Optional<String> firstname, Optional<String> lastName, @RequestParam("page") int page, @RequestParam("size") int size){
         return ResponseEntity.ok(
                 new ResponseModel<>(
-                        userService.getUsers(code, lastName, Pageable.unpaged())
+                        userService.getUsers(firstname, lastName, PageRequest.of(page, size))
+                )
+        );
+    }
+
+    @GetMapping("/user-enabled")
+    public ResponseEntity<?> findAllUsersEnabled(Optional<String> firstname, Optional<String> lastName, @RequestParam("page") int page, @RequestParam("size") int size){
+        return ResponseEntity.ok(
+                new ResponseModel<>(
+                        userService.getUsersEnabled(firstname, lastName, PageRequest.of(page, size))
                 )
         );
     }
@@ -83,6 +94,7 @@ public class UserController {
     public ResponseEntity<?> updateUser(@RequestBody @Valid User user, @PathVariable(name = "ref") String ref){
 
         try {
+            user.checkValidity();
             User tmpUser = userService.updateUser(user, ref);
             return ResponseEntity.ok(
                     new ResponseModel<>(tmpUser)
@@ -93,7 +105,7 @@ public class UserController {
         }catch (Exception e){
             log.error("Update Error: ", e);
             return ResponseEntity.status(500).body(
-                    new ResponseModel<>("And Error occurred while trying to register this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+                    new ResponseModel<>("And Error occurred while trying to update this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
             );
         }
     }
@@ -102,7 +114,7 @@ public class UserController {
     public ResponseEntity<?> createUser(@RequestBody @Valid User user){
 
         try{
-            user.checkValidity();
+            user.checkValidity(true);
         } catch (AbstractException e) {
             return ResponseEntity.ok().body(
                     new ResponseException(e)
@@ -213,4 +225,6 @@ public class UserController {
             );
         }
     }
+
+
 }

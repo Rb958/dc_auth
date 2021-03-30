@@ -245,7 +245,7 @@ public class User{
     }
 
     @JsonIgnore
-    public void checkValidity() throws AbstractException{
+    public void checkValidity(boolean isnew) throws AbstractException{
         if (email == null || email.isEmpty()){
             throw new NullUsersEmailException();
         }
@@ -258,5 +258,18 @@ public class User{
         if (lastname == null || lastname.isEmpty()){
             throw new NullUsersLastNameException();
         }
+        if(!phone.matches("(\\+2376|2376|6)[9876532][0-9]{7}")){
+            throw new InvalidePhoneException();
+        }
+        if (isnew && password.length() < 6){
+            throw new PasswordLenghtException();
+        }
+        if (lastname.length() < 2){
+            throw new InvalidLastNameException();
+        }
+    }
+
+    public void checkValidity() throws AbstractException {
+        checkValidity(false);
     }
 }

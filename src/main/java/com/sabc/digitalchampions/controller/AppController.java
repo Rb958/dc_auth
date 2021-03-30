@@ -37,13 +37,13 @@ public class AppController {
         }catch(Exception ex){
             logger.error(ex.getMessage(),ex);
             return ResponseEntity.status(500).body(
-                    new ResponseModel<>("And Error occured while trying to registre this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+                    new ResponseModel<>("Authentication failed", HttpStatus.INTERNAL_SERVER_ERROR)
             );
         }
     }
 
     @GetMapping("/user/email/{email}")
-    public ResponseEntity<ResponseModel<?>> findUserByEmail(@PathVariable(name="email") String email){
+    public ResponseEntity<?> findUserByEmail(@PathVariable(name="email") String email){
         try {
             return ResponseEntity.ok(
                     new ResponseModel<User>(
@@ -52,7 +52,7 @@ public class AppController {
             );
         }catch (AbstractException e){
             return ResponseEntity.ok()
-                    .body(new ResponseModel<>(e));
+                    .body(new ResponseException(e));
         }
     }
 

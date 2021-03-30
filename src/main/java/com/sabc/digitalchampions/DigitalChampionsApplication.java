@@ -52,11 +52,12 @@ public class DigitalChampionsApplication implements CommandLineRunner {
 		if (!userService.checkAdmin()){
 			User defaultUser = new User();
 			defaultUser.setFirstname("John")
+					.setMatricule("0000000000")
 					.setLastname("Doe")
-					.setPassword("admin")
+					.setPassword("admin12345")
 					.setEmail("admin@custom.com")
 					.setNickname("The Speaker")
-					.setPhone("000000000")
+					.setPhone("690000000")
 					.setPhoneChecked(true)
 					.setEmailChecked(true)
 					.setMatricule(CustomCodeGenerator.generateUserCode())

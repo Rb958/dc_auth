@@ -16,6 +16,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("select u from User u where u.firstname like %?1% or u.lastname like %?2%")
     Page<User> findAll(String fistName, String lastName, Pageable pageable);
 
+    @Query("select u from User u where (u.enabled = true) and (u.firstname like %?1% or u.lastname like %?2%)")
+    Page<User> findAddEnabled(String fistName, String lastName, Pageable pageable);
+
     boolean existsByMatricule(String code);
 
     User findByMatricule(String code);
