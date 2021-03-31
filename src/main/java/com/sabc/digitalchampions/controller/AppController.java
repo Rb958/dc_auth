@@ -46,7 +46,7 @@ public class AppController {
     public ResponseEntity<?> findUserByEmail(@PathVariable(name="email") String email){
         try {
             return ResponseEntity.ok(
-                    new ResponseModel<User>(
+                    new ResponseModel<>(
                             userService.findByEmail(email)
                     )
             );
@@ -72,6 +72,28 @@ public class AppController {
                 return ResponseEntity.status(500).body(
                         new ResponseModel<>("And Error occured while trying to registre this user. Contact the support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
                 );
+        }
+    }
+
+    @PatchMapping("/user/{code}/password")
+    public ResponseEntity<?> changePassword(@PathVariable(name = "code") String code, @RequestBody @Valid User user){
+        try{
+            if(userService.changePassword(code, user)){
+                return ResponseEntity.ok(new ResponseModel<>("Successfully Changed", HttpStatus.OK));
+            }else{
+                return ResponseEntity.status(500).body(
+                        new ResponseModel<>("Unable to change the password", HttpStatus.INTERNAL_SERVER_ERROR)
+                );
+            }
+        }catch(AbstractException e){
+            return ResponseEntity.ok(
+                    new ResponseException(e)
+            );
+        }catch(Exception e){
+            logger.error(e.getMessage(),e);
+            return ResponseEntity.status(500).body(
+                    new ResponseModel<>("An error occurred while trying to change the password. Pleace contact our support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+            );
         }
     }
 

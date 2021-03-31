@@ -278,4 +278,21 @@ public class UserService {
     public Page<User> getUsersEnabled(Optional<String> firstname, Optional<String> lastName, PageRequest pageable) {
         return userRepository.findAddEnabled(firstname.orElse(""), lastName.orElse(""), pageable);
     }
+
+    public boolean changePassword(String code, User user) throws AbstractException{
+        if (!userRepository.existsByMatricule(code)){
+            throw new UserNotFoundException();
+        }
+        if (user.getPassword() == null){
+            throw new NullPasswordException();
+        }
+        if (user.getPassword().isEmpty() || user.getPassword().length() < 6){
+            throw new BadPasswordException();
+        }
+        User newUser = userRepository.findByMatricule(code);
+        String password = passwordEncoder.encode(user.getPassword());
+        newUser.setPassword(password);
+        newUser = userRepository.save(newUser);
+        return newUser.getPassword().equals(password);
+    }
 }

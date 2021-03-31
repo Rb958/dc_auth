@@ -226,5 +226,27 @@ public class UserController {
         }
     }
 
+    @PatchMapping("/user/{code}/password")
+    public ResponseEntity<?> changePassword(@PathVariable(name = "code") String code, @RequestBody @Valid User user){
+        try{
+            if(userService.changePassword(code, user)){
+                return ResponseEntity.ok(new ResponseModel<>("Successfully Changed", HttpStatus.OK));
+            }else{
+                return ResponseEntity.status(500).body(
+                        new ResponseModel<>("Unable to change the password", HttpStatus.INTERNAL_SERVER_ERROR)
+                );
+            }
+        }catch(AbstractException e){
+            return ResponseEntity.ok(
+                    new ResponseException(e)
+            );
+        }catch(Exception e){
+            log.error(e.getMessage(),e);
+            return ResponseEntity.status(500).body(
+                    new ResponseModel<>("An error occurred while trying to change the password. Pleace contact our support if the problem persist", HttpStatus.INTERNAL_SERVER_ERROR)
+            );
+        }
+    }
+
 
 }
